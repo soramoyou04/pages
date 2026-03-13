@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>4分の1円扇形の厳密な転がり</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f5f5f5;
+      font-family: sans-serif;
+    }
+    canvas {
+      display: block;
+      margin: 24px auto;
+      background: #ffffff;
+      border: 1px solid #cccccc;
+    }
+  </style>
+</head>
+<body>
+<canvas id="canvas" width="1200" height="520"></canvas>
+
+<script>
+"use strict";
+
+/*
+  4分の1円の扇形 OAB
+  半径 = r
+  局所座標:
+    O = (0, 0)
+    B = (r, 0)
+    A = (0, r)
+
+  境界を O→B→弧AB→A→O とたどる。
+  地面は y = groundY。
+
+  初期状態:
+    O = (x0, groundY)
+    B = (x0 + r, groundY)
+    A = (x0, groundY - r)
+    つまり OB が地面に接している。
+
+  扇形は常に時計回りに回転しながら右へ進む。
+
+  フェーズ1:
+    接地境界 = OB
+    接地点 = B
+    O は B を中心に 90° 時計回りに回る
+  フェーズ2:
+    接地境界 = 弧AB
+    接点が弧上を B→A へ移る
+    すべりなし: 地面上の接点の移動距離 = 境界上の移動距離 = r * φ
+  フェーズ3:
+    接地境界 = OA
+    接地点 = A
+    O は A を中心に 90° 時計回りに回る
+
+  この実装では「接地点がどこか」を厳密に持つ。
+*/
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const scale = 120;             // 1 cm = 120 px
+const rCm = 1;                 // 半径 1 cm
+const r = rCm * scale;         // 描画半径
+const groundY = 390;
+const x0 = 120;                // 初期の O の x 座標
+
+// 時間設定
+const dur1 = 2.2;
+const dur2 = 2.6;
+const dur3 = 2.2;
+const totalDuration = dur1 + dur2 + dur3;
+
+// 扇形の局所座標
+const localO = { x: 0, y: 0 };
+const localB = { x: r, y: 0 };
+const localA = { x: 0, y: -r };  // Canvasでは上が -y
+
+// 弧ABは、局所座標で角度 -90° から 0°
+//   A = (0, -r) = angle -π/2
+//   B = (r,  0) = angle 0
+function localArcPoint(theta) {
+  return {
+    x: r * Math.cos(theta),
+    y: r * Math.sin(theta)
+  };
+}
+
+function rotatePoint(p, angle) {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return {
+    x: p.x * c - p.y * s,
+    y: p.x * s + p.y * c
+  };
+}
+
+function add(p, q) {
+  return { x: p.x + q.x, y: p.y + q.y };
+}
+
+function sub(p, q) {
+  return { x: p.x - q.x, y: p.y - q.y };
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function easeInOut(t) {
+  return 0.5 - 0.5 * Math.cos(Math.PI * t);
+}
+
+/*
+  状態表現:
+    center: 扇形中心 O のワールド座標
+    alpha: 扇形の姿勢角
+      alpha = 0 のとき
+        OB は右向き水平
+        OA は上向き垂直
+    contactX: 地面上の接点 x 座標
+    contactType: "OB" | "ARC" | "OA"
+    phi: フェーズ2のときの弧パラメータ
+         B -> A に進むので 0 -> π/2
+*/
+function getState(timeSec) {
+  let t = timeSec % totalDuration;
+
+  // -------------------------
+  // フェーズ1
+  // -------------------------
+  if (t < dur1) {
+    const u = easeInOut(t / dur1);
+
+    // 時計回り 90° => alpha: 0 -> +π/2
+    // Canvas 座標では y下向きなので、見た目の時計回りは +角で扱える
+    const alpha = lerp(0, Math.PI / 2, u);
+
+    // 接点は常に B
+    // B_world = center + R(alpha)*localB = (xB, groundY)
+    // よって center = contact - R(alpha)*localB
+    const contact = { x: x0 + r, y: groundY };
+    const rotatedB = rotatePoint(localB, alpha);
+    const center = sub(contact, rotatedB);
+
+    return {
+      phase: 1,
+      center,
+      alpha,
+      contactX: contact.x,
+      contactType: "OB",
+      phi: 0
+    };
+  }
+
+  // -------------------------
+  // フェーズ2
+  // -------------------------
+  if (t < dur1 + dur2) {
+    const u = easeInOut((t - dur1) / dur2);
+
+    // 弧上接点が B -> A
+    // 境界長 s = r * phi
+    // phi: 0 -> π/2
+    const phi = lerp(0, Math.PI / 2, u);
+
+    // すべりなしにより、地面上接点の x は
+    // 初期接点 x = x0 + r から、弧長 r*phi だけ右へ進む
+    const contactX = x0 + r + r * phi;
+    const contact = { x: contactX, y: groundY };
+
+    /*
+      今、弧上のどの点が接しているか。
+      初期フェーズ2では B が接点、終了時には A が接点。
+      局所弧パラメータ θ は 0 -> -π/2 ではなく、
+      A=(0,-r), B=(r,0) なので、弧上点は theta = -phi? を使うと
+        phi=0   -> B
+        phi=π/2 -> A
+      になる:
+        p(phi) = (r cos(phi), -r sin(phi))
+      これは theta = -phi に相当。
+    */
+    const localContactOnArc = {
+      x: r * Math.cos(phi),
+      y: -r * Math.sin(phi)
+    };
+
+    /*
+      この局所接点が地面の接点に来るように扇形が回る。
+      さらに接線が地面と一致する必要がある。
+      弧の接線方向は半径に直交する。
+      接点半径の向きは、ワールドでは常に真下を向く必要がある
+      （中心は接点の真上 r にある）。
+
+      つまり
+        R(alpha) * localContactOnArc = (0, -r)
+
+      localContactOnArc = (r cos(phi), -r sin(phi))
+      これを真下 (0, -r) へ送る alpha は
+        alpha = phi + π/2
+      ではなく実際に代入確認する。
+
+      alpha = phi のとき:
+        R(phi)*(r cos(phi), -r sin(phi)) = (r, 0) ではない
+
+      alpha = phi - π/2 のとき:
+        B(=phi=0) -> -π/2 回転で (0,-r) になる
+
+      ただしフェーズ1終了時 alpha = +π/2 で B が接していた。
+      こことつなぐには Canvasの角度系に合わせて
+        alpha = π/2 + phi
+      を使うと
+        phi=0 で alpha=π/2
+        phi=π/2 で alpha=π
+      となり連続。
+      実際に R(alpha)*localContactOnArc を計算すると (0, +r) になるので、
+      center = contact - rotatedContact とすれば center は接点の上に来る。
+    */
+    const alpha = Math.PI / 2 + phi;
+    const rotatedContact = rotatePoint(localContactOnArc, alpha);
+    const center = sub(contact, rotatedContact);
+
+    return {
+      phase: 2,
+      center,
+      alpha,
+      contactX,
+      contactType: "ARC",
+      phi
+    };
+  }
+
+  // -------------------------
+  // フェーズ3
+  // -------------------------
+  {
+    const u = easeInOut((t - dur1 - dur2) / dur3);
+
+    // フェーズ2終了時、A が接点
+    // 地面上の A の x 座標
+    const contactAX = x0 + r + r * (Math.PI / 2);
+    const contactA = { x: contactAX, y: groundY };
+
+    // alpha: π -> 3π/2
+    const alpha = lerp(Math.PI, 3 * Math.PI / 2, u);
+
+    // A_world = center + R(alpha)*localA = contactA
+    const rotatedA = rotatePoint(localA, alpha);
+    const center = sub(contactA, rotatedA);
+
+    return {
+      phase: 3,
+      center,
+      alpha,
+      contactX: contactAX,
+      contactType: "OA",
+      phi: Math.PI / 2
+    };
+  }
+}
+
+// 描画用
+function worldPoint(center, alpha, localP) {
+  return add(center, rotatePoint(localP, alpha));
+}
+
+function drawGround() {
+  ctx.beginPath();
+  ctx.moveTo(40, groundY);
+  ctx.lineTo(canvas.width - 40, groundY);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#444";
+  ctx.stroke();
+}
+
+function drawSector(state) {
+  const O = state.center;
+  const A = worldPoint(state.center, state.alpha, localA);
+  const B = worldPoint(state.center, state.alpha, localB);
+
+  // 塗り
+  ctx.beginPath();
+  ctx.moveTo(O.x, O.y);
+  ctx.lineTo(A.x, A.y);
+
+  // 弧AB
+  // alpha=0 で A は -90°, B は 0°
+  ctx.arc(O.x, O.y, r, state.alpha - Math.PI / 2, state.alpha, false);
+
+  ctx.closePath();
+  ctx.fillStyle = "rgba(120, 180, 255, 0.35)";
+  ctx.fill();
+
+  // 輪郭
+  ctx.beginPath();
+  ctx.moveTo(O.x, O.y);
+  ctx.lineTo(A.x, A.y);
+  ctx.arc(O.x, O.y, r, state.alpha - Math.PI / 2, state.alpha, false);
+  ctx.lineTo(O.x, O.y);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#1565c0";
+  ctx.stroke();
+
+  // 半径
+  ctx.beginPath();
+  ctx.moveTo(O.x, O.y);
+  ctx.lineTo(A.x, A.y);
+  ctx.moveTo(O.x, O.y);
+  ctx.lineTo(B.x, B.y);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#333";
+  ctx.stroke();
+
+  // 点
+  drawPoint(O.x, O.y, "red");
+  drawPoint(A.x, A.y, "#0a7");
+  drawPoint(B.x, B.y, "#a70");
+
+  drawLabel("O", O.x + 10, O.y - 10);
+  drawLabel("A", A.x + 10, A.y - 10);
+  drawLabel("B", B.x + 10, B.y - 10);
+}
+
+function drawPoint(x, y, color) {
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawLabel(text, x, y) {
+  ctx.fillStyle = "#000";
+  ctx.font = "18px sans-serif";
+  ctx.fillText(text, x, y);
+}
+
+const trail = [];
+
+function updateTrail(O, elapsed) {
+  if (elapsed % totalDuration < 0.03) {
+    trail.length = 0;
+  }
+
+  if (trail.length === 0) {
+    trail.push({ x: O.x, y: O.y });
+    return;
+  }
+
+  const last = trail[trail.length - 1];
+  const dx = O.x - last.x;
+  const dy = O.y - last.y;
+  if (Math.hypot(dx, dy) > 1.5) {
+    trail.push({ x: O.x, y: O.y });
+  }
+}
+
+function drawTrail() {
+  if (trail.length < 2) return;
+
+  ctx.beginPath();
+  ctx.moveTo(trail[0].x, trail[0].y);
+  for (let i = 1; i < trail.length; i++) {
+    ctx.lineTo(trail[i].x, trail[i].y);
+  }
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#1e88e5";
+  ctx.stroke();
+}
+
+function drawContactInfo(state) {
+  const contact = { x: state.contactX, y: groundY };
+
+  drawPoint(contact.x, contact.y, "#111");
+
+  ctx.beginPath();
+  ctx.moveTo(contact.x, groundY - 18);
+  ctx.lineTo(contact.x, groundY + 18);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "#888";
+  ctx.stroke();
+
+  ctx.fillStyle = "#111";
+  ctx.font = "20px sans-serif";
+
+  let phaseText = "";
+  if (state.phase === 1) {
+    phaseText = "フェーズ1: 辺 OB が接地し、点Bまわりに時計回り回転";
+  } else if (state.phase === 2) {
+    phaseText = "フェーズ2: 弧 AB が接地し、接点が B → A へ移動";
+  } else {
+    phaseText = "フェーズ3: 辺 OA が接地し、点Aまわりに時計回り回転";
+  }
+
+  ctx.fillText(phaseText, 40, 40);
+
+  ctx.font = "18px sans-serif";
+  ctx.fillText(`接地部分: ${state.contactType}`, 40, 72);
+  ctx.fillText(`半径: ${rCm} cm`, 40, 100);
+  ctx.fillText(`点Oの軌跡の長さ: 3π/2 cm ≒ ${(1.5 * Math.PI).toFixed(4)} cm`, 40, 128);
+
+  if (state.phase === 2) {
+    ctx.fillText(`弧上パラメータ φ = ${(state.phi * 180 / Math.PI).toFixed(1)}°`, 40, 156);
+  }
+
+  ctx.fillText(`接点 x = ${(state.contactX / scale).toFixed(3)} cm`, 40, 184);
+}
+
+function drawReference() {
+  // 初期位置の薄い図
+  const O = { x: x0, y: groundY };
+  const A = { x: x0, y: groundY - r };
+  const B = { x: x0 + r, y: groundY };
+
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+
+  ctx.beginPath();
+  ctx.moveTo(O.x, O.y);
+  ctx.lineTo(A.x, A.y);
+  ctx.arc(O.x, O.y, r, -Math.PI / 2, 0, false);
+  ctx.closePath();
+  ctx.fillStyle = "#90caf9";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(O.x, O.y);
+  ctx.lineTo(A.x, A.y);
+  ctx.arc(O.x, O.y, r, -Math.PI / 2, 0, false);
+  ctx.lineTo(O.x, O.y);
+  ctx.strokeStyle = "#999";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+let startTime = null;
+
+function animate(timestamp) {
+  if (startTime === null) {
+    startTime = timestamp;
+  }
+
+  const elapsed = (timestamp - startTime) / 1000;
+  const state = getState(elapsed);
+
+  updateTrail(state.center, elapsed);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawGround();
+  drawReference();
+  drawTrail();
+  drawSector(state);
+  drawContactInfo(state);
+
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

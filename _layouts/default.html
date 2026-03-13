@@ -24,7 +24,9 @@
       <nav class="site-nav">
         <a href="{{ '/' | relative_url }}" {% if page.url == "/" %}class="active"{% endif %}>Home</a>
         <a href="{{ '/projects/tetrahedron-volume.html' | relative_url }}" 
-           {% if page.url contains '/projects/' %}class="active"{% endif %}>作品</a>
+           {% if page.url contains '/tetrahedron-volume' %}class="active"{% endif %}>四面体体積</a>
+        <a href="{{ '/projects/quarter-circle-rolling.html' | relative_url }}" 
+           {% if page.url contains '/quarter-circle-rolling' %}class="active"{% endif %}>円扇形転がり</a>
         <a href="https://github.com/soramoyou04" target="_blank" rel="noopener">GitHub</a>
       </nav>
     </div>
