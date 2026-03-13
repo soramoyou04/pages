@@ -25,17 +25,44 @@
     }
     #app { width: 100%; height: 100%; position: relative; }
     #scene { width: 100%; height: 100%; }
-    .panel {
+    .ui-shell {
       position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: min(450px, calc(100vw - 28px));
+    }
+    .ui-toggle {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      font-size: 1.35rem;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+    }
+    .ui-panel {
       background: var(--panel);
       backdrop-filter: blur(10px);
       border: 1px solid var(--border);
       border-radius: 18px;
       box-shadow: 0 18px 50px rgba(0,0,0,0.28);
+      padding: 14px 16px 16px;
+      max-height: calc(100vh - 80px);
+      overflow: auto;
     }
-    .top-left { top: 16px; left: 16px; width: min(440px, calc(100vw - 32px)); padding: 16px 18px; }
-    .bottom-left { left: 16px; bottom: 16px; width: min(440px, calc(100vw - 32px)); padding: 14px 16px 16px; }
-    .top-right { top: 16px; right: 16px; width: min(340px, calc(100vw - 32px)); padding: 14px 16px 16px; }
+    .ui-panel.hidden {
+      display: none;
+    }
     h1 { margin: 0 0 8px; font-size: 1.25rem; line-height: 1.4; }
     h2 { margin: 0 0 10px; font-size: 1rem; color: var(--accent); }
     p, li, .small { color: var(--muted); line-height: 1.7; margin: 0; font-size: 0.96rem; }
@@ -63,34 +90,18 @@
     }
     .step-title { font-size: 1rem; margin-bottom: 8px; color: #fff; font-weight: 700; }
     .help { margin-top: 10px; font-size: 0.88rem; color: var(--muted); }
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-    .panel-toggle {
-      border: 1px solid rgba(148, 163, 184, 0.28);
-      background: rgba(30, 41, 59, 0.9);
-      color: #eef6ff;
-      border-radius: 10px;
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-    .collapsible-content.hidden {
-      display: none;
-    }
-    @media (max-width: 900px) {
-      .top-right { top: auto; bottom: 16px; right: 16px; }
-      .bottom-left { bottom: 220px; }
+    .section-title {
+      margin-top: 14px;
     }
     @media (max-width: 700px) {
-      .top-left, .top-right, .bottom-left { width: calc(100vw - 24px); left: 12px; right: 12px; }
-      .top-left { top: 12px; }
-      .top-right { top: auto; bottom: 12px; }
-      .bottom-left { bottom: 250px; }
+      .ui-shell {
+        top: 10px;
+        left: 10px;
+        width: calc(100vw - 20px);
+      }
+      .ui-panel {
+        max-height: calc(100vh - 72px);
+      }
     }
   </style>
 </head>
@@ -98,32 +109,17 @@
   <div id="app">
     <div id="scene"></div>
 
-    <div class="panel top-left">
-      <div class="badge">3Dで回して確認</div>
-      <div class="panel-header">
+    <div class="ui-shell" id="uiShell">
+      <button id="uiToggleBtn" class="ui-toggle" type="button" aria-expanded="true" aria-controls="uiPanel" aria-label="UIを開閉">☰</button>
+      <div id="uiPanel" class="ui-panel">
+        <div class="badge">3Dで回して確認</div>
         <h1>四面体 PCHF の体積を、立体を回転しながら理解する</h1>
-        <button id="toggleExplainBtn" class="panel-toggle" type="button" aria-expanded="true" aria-controls="explainContent">説明を閉じる</button>
-      </div>
-      <div id="explainContent" class="collapsible-content">
         <p>
           底面が EFGH になる向きで立方体を表示しています。マウスや指でドラッグすると回転できます。
           各ステップでは、解答で使う立体そのものを表示して、形を確認できるようにしています。
         </p>
-      </div>
-      <div class="step-buttons" id="stepButtons"></div>
-      <div class="controls-row">
-        <button id="resetViewBtn" class="secondary">視点を初期化</button>
-        <button id="playBtn" class="secondary">自動再生</button>
-      </div>
-      <label class="toggle"><input type="checkbox" id="autoRotateToggle" /> ゆっくり自動回転</label>
-    </div>
 
-    <div class="panel top-right">
-      <div class="panel-header">
-        <h2>表示の意味</h2>
-        <button id="toggleLegendBtn" class="panel-toggle" type="button" aria-expanded="true" aria-controls="legendContent">凡例を閉じる</button>
-      </div>
-      <div id="legendContent" class="collapsible-content">
+        <h2 class="section-title">表示の意味</h2>
         <div class="legend">
           <div class="legend-item"><span class="swatch" style="background:#60a5fa"></span> グループ2で使う底面 △EFH</div>
           <div class="legend-item"><span class="swatch" style="background:#f97316"></span> 三角すい P-BCF</div>
@@ -139,13 +135,18 @@
           点のラベルは A, B, C, D, E, F, G, H, P です。<br>
           P は辺 AE の中点です。
         </div>
-      </div>
-    </div>
 
-    <div class="panel bottom-left">
-      <div class="step-title" id="stepTitle">ステップ 1</div>
-      <p id="stepBody"></p>
-      <div class="formula" id="formulaBox"></div>
+        <h2 class="section-title">ステップ</h2>
+        <div class="step-buttons" id="stepButtons"></div>
+        <div class="step-title" id="stepTitle">ステップ 1</div>
+        <p id="stepBody"></p>
+        <div class="formula" id="formulaBox"></div>
+        <div class="controls-row">
+          <button id="resetViewBtn" class="secondary">視点を初期化</button>
+          <button id="playBtn" class="secondary">自動再生</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="autoRotateToggle" /> ゆっくり自動回転</label>
+      </div>
     </div>
   </div>
 
@@ -170,10 +171,8 @@
     const resetViewBtn = document.getElementById('resetViewBtn');
     const playBtn = document.getElementById('playBtn');
     const autoRotateToggle = document.getElementById('autoRotateToggle');
-    const toggleExplainBtn = document.getElementById('toggleExplainBtn');
-    const toggleLegendBtn = document.getElementById('toggleLegendBtn');
-    const explainContent = document.getElementById('explainContent');
-    const legendContent = document.getElementById('legendContent');
+    const uiPanel = document.getElementById('uiPanel');
+    const uiToggleBtn = document.getElementById('uiToggleBtn');
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b1020);
@@ -482,25 +481,18 @@
       controls.autoRotateSpeed = 0.9;
     });
 
-    function setCollapsed(button, content, collapsed, openLabel, closeLabel) {
-      content.classList.toggle('hidden', collapsed);
-      button.setAttribute('aria-expanded', String(!collapsed));
-      button.textContent = collapsed ? openLabel : closeLabel;
+    function setUiCollapsed(collapsed) {
+      uiPanel.classList.toggle('hidden', collapsed);
+      uiToggleBtn.setAttribute('aria-expanded', String(!collapsed));
     }
 
-    function bindToggle(button, content, openLabel, closeLabel) {
-      button.addEventListener('click', () => {
-        const collapsed = !content.classList.contains('hidden');
-        setCollapsed(button, content, collapsed, openLabel, closeLabel);
-      });
-    }
-
-    bindToggle(toggleExplainBtn, explainContent, '説明を開く', '説明を閉じる');
-    bindToggle(toggleLegendBtn, legendContent, '凡例を開く', '凡例を閉じる');
+    uiToggleBtn.addEventListener('click', () => {
+      const collapsed = !uiPanel.classList.contains('hidden');
+      setUiCollapsed(collapsed);
+    });
 
     if (window.matchMedia('(max-width: 700px)').matches) {
-      setCollapsed(toggleExplainBtn, explainContent, true, '説明を開く', '説明を閉じる');
-      setCollapsed(toggleLegendBtn, legendContent, true, '凡例を開く', '凡例を閉じる');
+      setUiCollapsed(true);
     }
 
     window.addEventListener('resize', () => {
