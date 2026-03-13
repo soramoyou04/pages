@@ -219,7 +219,7 @@ li {
 
 .threejs-viewer iframe {
   width: 100%;
-  height: 900px;
+  height: min(900px, 78vh);
   border: none;
   display: block;
 }
@@ -296,7 +296,7 @@ li {
   }
   
   .threejs-viewer iframe {
-    height: 600px;
+    height: 68vh;
   }
   
   .footer-content {
@@ -329,7 +329,7 @@ li {
   }
   
   .threejs-viewer iframe {
-    height: 500px;
+    height: 60vh;
   }
 }
 

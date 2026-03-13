@@ -63,6 +63,25 @@
     }
     .step-title { font-size: 1rem; margin-bottom: 8px; color: #fff; font-weight: 700; }
     .help { margin-top: 10px; font-size: 0.88rem; color: var(--muted); }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .panel-toggle {
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(30, 41, 59, 0.9);
+      color: #eef6ff;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .collapsible-content.hidden {
+      display: none;
+    }
     @media (max-width: 900px) {
       .top-right { top: auto; bottom: 16px; right: 16px; }
       .bottom-left { bottom: 220px; }
@@ -81,11 +100,16 @@
 
     <div class="panel top-left">
       <div class="badge">3Dで回して確認</div>
-      <h1>四面体 PCHF の体積を、立体を回転しながら理解する</h1>
-      <p>
-        底面が EFGH になる向きで立方体を表示しています。マウスや指でドラッグすると回転できます。
-        各ステップでは、解答で使う立体そのものを表示して、形を確認できるようにしています。
-      </p>
+      <div class="panel-header">
+        <h1>四面体 PCHF の体積を、立体を回転しながら理解する</h1>
+        <button id="toggleExplainBtn" class="panel-toggle" type="button" aria-expanded="true" aria-controls="explainContent">説明を閉じる</button>
+      </div>
+      <div id="explainContent" class="collapsible-content">
+        <p>
+          底面が EFGH になる向きで立方体を表示しています。マウスや指でドラッグすると回転できます。
+          各ステップでは、解答で使う立体そのものを表示して、形を確認できるようにしています。
+        </p>
+      </div>
       <div class="step-buttons" id="stepButtons"></div>
       <div class="controls-row">
         <button id="resetViewBtn" class="secondary">視点を初期化</button>
@@ -95,21 +119,26 @@
     </div>
 
     <div class="panel top-right">
-      <h2>表示の意味</h2>
-      <div class="legend">
-        <div class="legend-item"><span class="swatch" style="background:#60a5fa"></span> グループ2で使う底面 △EFH</div>
-        <div class="legend-item"><span class="swatch" style="background:#f97316"></span> 三角すい P-BCF</div>
-        <div class="legend-item"><span class="swatch" style="background:#eab308"></span> 三角すい P-CDH</div>
-        <div class="legend-item"><span class="swatch" style="background:#14b8a6"></span> 三角すい C-FGH</div>
-        <div class="legend-item"><span class="swatch" style="background:#60a5fa"></span> 三角すい P-EFH</div>
-        <div class="legend-item"><span class="swatch" style="background:#a855f7"></span> 三角すい C-ABP</div>
-        <div class="legend-item"><span class="swatch" style="background:#ec4899"></span> 三角すい C-ADP</div>
-        <div class="legend-item"><span class="swatch" style="background:#34d399"></span> 求める底面 △CHF</div>
-        <div class="legend-item"><span class="swatch" style="background:#f87171"></span> 求めたい三角すい P-CHF</div>
+      <div class="panel-header">
+        <h2>表示の意味</h2>
+        <button id="toggleLegendBtn" class="panel-toggle" type="button" aria-expanded="true" aria-controls="legendContent">凡例を閉じる</button>
       </div>
-      <div class="help">
-        点のラベルは A, B, C, D, E, F, G, H, P です。<br>
-        P は辺 AE の中点です。
+      <div id="legendContent" class="collapsible-content">
+        <div class="legend">
+          <div class="legend-item"><span class="swatch" style="background:#60a5fa"></span> グループ2で使う底面 △EFH</div>
+          <div class="legend-item"><span class="swatch" style="background:#f97316"></span> 三角すい P-BCF</div>
+          <div class="legend-item"><span class="swatch" style="background:#eab308"></span> 三角すい P-CDH</div>
+          <div class="legend-item"><span class="swatch" style="background:#14b8a6"></span> 三角すい C-FGH</div>
+          <div class="legend-item"><span class="swatch" style="background:#60a5fa"></span> 三角すい P-EFH</div>
+          <div class="legend-item"><span class="swatch" style="background:#a855f7"></span> 三角すい C-ABP</div>
+          <div class="legend-item"><span class="swatch" style="background:#ec4899"></span> 三角すい C-ADP</div>
+          <div class="legend-item"><span class="swatch" style="background:#34d399"></span> 求める底面 △CHF</div>
+          <div class="legend-item"><span class="swatch" style="background:#f87171"></span> 求めたい三角すい P-CHF</div>
+        </div>
+        <div class="help">
+          点のラベルは A, B, C, D, E, F, G, H, P です。<br>
+          P は辺 AE の中点です。
+        </div>
       </div>
     </div>
 
@@ -141,6 +170,10 @@
     const resetViewBtn = document.getElementById('resetViewBtn');
     const playBtn = document.getElementById('playBtn');
     const autoRotateToggle = document.getElementById('autoRotateToggle');
+    const toggleExplainBtn = document.getElementById('toggleExplainBtn');
+    const toggleLegendBtn = document.getElementById('toggleLegendBtn');
+    const explainContent = document.getElementById('explainContent');
+    const legendContent = document.getElementById('legendContent');
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b1020);
@@ -448,6 +481,27 @@
       controls.autoRotate = e.target.checked;
       controls.autoRotateSpeed = 0.9;
     });
+
+    function setCollapsed(button, content, collapsed, openLabel, closeLabel) {
+      content.classList.toggle('hidden', collapsed);
+      button.setAttribute('aria-expanded', String(!collapsed));
+      button.textContent = collapsed ? openLabel : closeLabel;
+    }
+
+    function bindToggle(button, content, openLabel, closeLabel) {
+      button.addEventListener('click', () => {
+        const collapsed = !content.classList.contains('hidden');
+        setCollapsed(button, content, collapsed, openLabel, closeLabel);
+      });
+    }
+
+    bindToggle(toggleExplainBtn, explainContent, '説明を開く', '説明を閉じる');
+    bindToggle(toggleLegendBtn, legendContent, '凡例を開く', '凡例を閉じる');
+
+    if (window.matchMedia('(max-width: 700px)').matches) {
+      setCollapsed(toggleExplainBtn, explainContent, true, '説明を開く', '説明を閉じる');
+      setCollapsed(toggleLegendBtn, legendContent, true, '凡例を開く', '凡例を閉じる');
+    }
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;

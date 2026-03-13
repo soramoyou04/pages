@@ -9,16 +9,101 @@
       background: #f5f5f5;
       font-family: sans-serif;
     }
-    canvas {
-      display: block;
-      margin: 24px auto;
+    .container {
+      width: min(1220px, 96vw);
+      margin: 12px auto 24px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 0 0 12px;
+    }
+    .toggle-btn {
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #0f172a;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .panel {
+      background: #ffffff;
+      border: 1px solid #d9e2ec;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      line-height: 1.7;
+      color: #1f2937;
+      font-size: 14px;
+    }
+    .panel.hidden {
+      display: none;
+    }
+    .legend-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .canvas-wrap {
       background: #ffffff;
       border: 1px solid #cccccc;
+      border-radius: 10px;
+      padding: 8px;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 0;
+    }
+    @media (max-width: 768px) {
+      .container {
+        width: 100vw;
+        padding: 0 8px;
+        margin-top: 8px;
+      }
+      .toggle-btn {
+        font-size: 13px;
+        padding: 8px 10px;
+      }
+      .panel {
+        font-size: 13px;
+      }
     }
   </style>
 </head>
 <body>
-<canvas id="canvas" width="1200" height="520"></canvas>
+<div class="container">
+  <div class="toolbar">
+    <button id="toggleDescriptionBtn" class="toggle-btn" type="button" aria-expanded="false" aria-controls="descriptionPanel">説明を開く</button>
+    <button id="toggleLegendBtn" class="toggle-btn" type="button" aria-expanded="false" aria-controls="legendPanel">凡例を開く</button>
+  </div>
+
+  <div id="descriptionPanel" class="panel hidden">
+    <strong>作品の説明</strong><br>
+    4分の1円扇形 OAB が地面上をすべらずに転がる様子を、
+    フェーズ1（辺OB）→ フェーズ2（弧AB）→ フェーズ3（辺OA）の順で可視化しています。
+    図を見やすくするため、説明は開閉できます。
+  </div>
+
+  <div id="legendPanel" class="panel hidden">
+    <strong>凡例</strong>
+    <ul class="legend-list">
+      <li>赤点: 中心 O</li>
+      <li>緑点: 点 A</li>
+      <li>橙点: 点 B</li>
+      <li>黒点: 地面上の接点</li>
+      <li>青線: 点 O の軌跡</li>
+    </ul>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="canvas" width="1200" height="520"></canvas>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -60,6 +145,10 @@
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const toggleDescriptionBtn = document.getElementById("toggleDescriptionBtn");
+const toggleLegendBtn = document.getElementById("toggleLegendBtn");
+const descriptionPanel = document.getElementById("descriptionPanel");
+const legendPanel = document.getElementById("legendPanel");
 
 const scale = 120;             // 1 cm = 120 px
 const rCm = 1;                 // 半径 1 cm
@@ -371,6 +460,7 @@ function drawTrail() {
 
 function drawContactInfo(state) {
   const contact = { x: state.contactX, y: groundY };
+  const isSmallScreen = window.matchMedia("(max-width: 768px)").matches;
 
   drawPoint(contact.x, contact.y, "#111");
 
@@ -382,7 +472,7 @@ function drawContactInfo(state) {
   ctx.stroke();
 
   ctx.fillStyle = "#111";
-  ctx.font = "20px sans-serif";
+  ctx.font = isSmallScreen ? "16px sans-serif" : "20px sans-serif";
 
   let phaseText = "";
   if (state.phase === 1) {
@@ -393,18 +483,23 @@ function drawContactInfo(state) {
     phaseText = "フェーズ3: 辺 OA が接地し、点Aまわりに時計回り回転";
   }
 
-  ctx.fillText(phaseText, 40, 40);
+  if (isSmallScreen) {
+    ctx.fillText(`接地: ${state.contactType} / φ=${(state.phi * 180 / Math.PI).toFixed(0)}°`, 24, 34);
+    ctx.fillText(`接点 x=${(state.contactX / scale).toFixed(3)} cm`, 24, 58);
+  } else {
+    ctx.fillText(phaseText, 40, 40);
 
-  ctx.font = "18px sans-serif";
-  ctx.fillText(`接地部分: ${state.contactType}`, 40, 72);
-  ctx.fillText(`半径: ${rCm} cm`, 40, 100);
-  ctx.fillText(`点Oの軌跡の長さ: 3π/2 cm ≒ ${(1.5 * Math.PI).toFixed(4)} cm`, 40, 128);
+    ctx.font = "18px sans-serif";
+    ctx.fillText(`接地部分: ${state.contactType}`, 40, 72);
+    ctx.fillText(`半径: ${rCm} cm`, 40, 100);
+    ctx.fillText(`点Oの軌跡の長さ: 3π/2 cm ≒ ${(1.5 * Math.PI).toFixed(4)} cm`, 40, 128);
 
-  if (state.phase === 2) {
-    ctx.fillText(`弧上パラメータ φ = ${(state.phi * 180 / Math.PI).toFixed(1)}°`, 40, 156);
+    if (state.phase === 2) {
+      ctx.fillText(`弧上パラメータ φ = ${(state.phi * 180 / Math.PI).toFixed(1)}°`, 40, 156);
+    }
+
+    ctx.fillText(`接点 x = ${(state.contactX / scale).toFixed(3)} cm`, 40, 184);
   }
-
-  ctx.fillText(`接点 x = ${(state.contactX / scale).toFixed(3)} cm`, 40, 184);
 }
 
 function drawReference() {
@@ -437,6 +532,22 @@ function drawReference() {
 }
 
 let startTime = null;
+
+function setPanelState(button, panel, expanded, openLabel, closeLabel) {
+  panel.classList.toggle("hidden", !expanded);
+  button.setAttribute("aria-expanded", String(expanded));
+  button.textContent = expanded ? closeLabel : openLabel;
+}
+
+function bindPanelToggle(button, panel, openLabel, closeLabel) {
+  button.addEventListener("click", () => {
+    const isExpanded = button.getAttribute("aria-expanded") === "true";
+    setPanelState(button, panel, !isExpanded, openLabel, closeLabel);
+  });
+}
+
+bindPanelToggle(toggleDescriptionBtn, descriptionPanel, "説明を開く", "説明を閉じる");
+bindPanelToggle(toggleLegendBtn, legendPanel, "凡例を開く", "凡例を閉じる");
 
 function animate(timestamp) {
   if (startTime === null) {
