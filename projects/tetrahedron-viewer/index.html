@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>四面体PCHF体積3Dビューア</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Yu Gothic UI", "Yu Gothic", "Meiryo", sans-serif;
+      background: #081120;
+      color: #ffffff;
+      overflow: hidden;
+    }
+    
+    .viewer-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    .placeholder {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+    
+    .placeholder h1 {
+      font-size: 2rem;
+      margin-bottom: 16px;
+      color: #3b82f6;
+    }
+    
+    .placeholder p {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      max-width: 600px;
+      margin: 12px 0;
+      color: #cbd5e1;
+    }
+    
+    .placeholder .highlight {
+      color: #22d3ee;
+      font-weight: 600;
+    }
+    
+    .instruction {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+      max-width: 700px;
+    }
+    
+    .instruction h3 {
+      margin: 0 0 12px 0;
+      color: #60a5fa;
+    }
+    
+    .code-example {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: "Consolas", "Monaco", monospace;
+      font-size: 0.9rem;
+      color: #e2e8f0;
+      text-align: left;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    
+    .loading-animation {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(59, 130, 246, 0.3);
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 24px auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewer-container">
+    <div class="placeholder">
+      <div class="loading-animation"></div>
+      
+      <h1>🔺 四面体 PCHF の体積 3D ビューア</h1>
+      
+      <p>ここに <span class="highlight">Three.js による四面体の体積可視化</span> が表示されます。</p>
+      
+      <div class="instruction">
+        <h3>📝 実装手順</h3>
+        <p>あなたの既存の Three.js 四面体作品を、このファイルに置き換えてください：</p>
+        
+        <div class="code-example">
+projects/tetrahedron-viewer/index.html
+        </div>
+        
+        <p>期待される機能：</p>
+        <ul style="text-align: left; color: #cbd5e1;">
+          <li>✅ マウスドラッグで 3D 回転</li>
+          <li>✅ ホイールでズーム</li>
+          <li>✅ ステップ切替ボタン</li>
+          <li>✅ 立方体 → 6つの三角錐除外 → 目標四面体</li>
+        </ul>
+      </div>
+      
+      <p style="margin-top: 32px; font-size: 0.9rem; color: #94a3b8;">
+        このプレースホルダーを削除して、あなたの Three.js 作品を配置してください。<br>
+        Jekyll サイト全体は既に準備完了です！
+      </p>
+    </div>
+  </div>
+
+  <!-- 将来的な Three.js スクリプトの場所 -->
+  <script>
+    // あなたの Three.js コードをここに配置
+    console.log('Three.js 四面体ビューア準備完了 - あなたのコードを配置してください');
+    
+    // プレースホルダーの簡易アニメーション
+    setTimeout(() => {
+      console.log('Jekyll + Three.js ポートフォリオサイトが正常に動作中');
+    }, 2000);
+  </script>
+</body>
+</html>

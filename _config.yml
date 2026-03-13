@@ -1,0 +1,68 @@
+title: "Naoki Portfolio"
+description: "IT Engineer Portfolio - Three.js作品とスキルをまとめたサイト"
+author: "Naoki"
+lang: ja
+
+# GitHub Pages設定
+url: "https://soramoyou04.github.io"
+baseurl: "/pages"
+
+# Jekyll設定
+theme: minima
+markdown: kramdown
+kramdown:
+  input: GFM
+
+# プラグイン（GitHub Pagesでサポートされているもの）
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# ビルド設定
+exclude:
+  - node_modules
+  - "*.gemspec"
+  - "*.gem"
+  - Gemfile
+  - Gemfile.lock
+  - package.json
+  - package-lock.json
+  - script/
+  - LICENSE.txt
+  - lib/
+  - bin/
+  - README.md
+  - Rakefile
+  - docs/
+
+future: false
+show_drafts: false
+lsi: false
+excerpt_separator: "\n\n"
+incremental: false
+
+# collection設定（将来作品が増えた場合に備えて）
+collections_dir: collections
+collections:
+  projects:
+    output: true
+    permalink: /:collection/:name/
+
+# デフォルト値
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "default"
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: ""
+      type: "projects"
+    values:
+      layout: "default"
